@@ -1,0 +1,222 @@
+---
+title: " Yaohua Ma, M.S \\\nDivision of Biomedical Statistics and Informatics \\\nMayo Clinic, Jacksonville \\\nExtension 3-0453    \\\nMa.Yaohua@mayo.edu"
+
+
+subtitle: "Date:      07/22/2020	\\\n From:    Yaohua Ma  \\\nTo:     Dr. Thompson  \\\nRe:       HALO analysis (ADS#214070)"
+
+
+output: 
+   word_document:
+           reference_doc: ~/R/rpgm/rmd_template2.docx 
+           
+---
+
+```{r setup, include=FALSE , echo = FALSE,  warning=FALSE, message=FALSE}
+## STUDYADDRESS: /projects/bsi/fl/studies/s214070.Thompson.DSP2/re_analyze_FinXX950/data
+## INVESTIGATOR:  Dr. Thompson
+## STATISTICIAN:  Yaohua Ma
+
+
+library(ggplot2)
+library(readxl)
+library(writexl)
+library(tidyverse)
+library(dplyr)
+library(arsenal)
+library(MASS)
+setwd("/projects/bsi/fl/studies/s214070.Thompson.DSP2")
+Dir <- "/projects/bsi/fl/studies/s214070.Thompson.DSP2/"
+d1 <- read_excel("HALO/data/copy_updatedHALOFinXX542020.xlsx", sheet = "Sheet1")  # read HALO data
+# names(d1) <- make.names(names(d1))  ##must have a unique name
+   originalname <- colnames(d1)  # keep original name  format in the data rename(CD68posCKneg_per_mm2 =`CD68+/CK- per mm2`) # add``
+library(tidyr)
+da1 <- d1 %>%   rename(PatientID=Tag, CD45pos_mm2 =`Total CD45+/CK-/CD68- per mm2`, CD68pos_mm2 =`Total CD68+/CK- per mm2`, 
+                                    CD45pos_mm2_tumor=`Intratumor: CD45+ per mm2`, CD68pos_mm2_tumor=`Intratumor: CD68+ per mm2`,
+                                    CD45pos_mm2_stroma=`Stromal CD45+ cells per mm2`,  CD68pos_mm2_stroma=`Stromal CD68+ cells per mm2`) %>% 
+                              arrange(PatientID) %>% dplyr::select(PatientID, CD45pos_mm2, CD68pos_mm2, CD45pos_mm2_tumor,CD68pos_mm2_tumor,
+                                                         CD45pos_mm2_stroma,     CD68pos_mm2_stroma   )
+## Z:\studies\s214070.Thompson.DSP2\re_analyze_FinXX950\output/r12_FinXX_DSP950_meanbyclinicID.xlsx
+# d.finxx.tumor <- read_excel("re_analyze_FinXX950/output/r12_FinXX_DSP950_meanbyclinicID.xlsx", sheet = "Sheet1")    ## FInxx tumor
+# d.finxx.stroma <- read_excel("re_analyze_FinXX950/output/r12_FinXX_DSP950_meanbyclinicID.xlsx", sheet = "Sheet2")  ## Finxx stroma
+
+
+
+d.finxx.CD45tumor <- read_excel("re_analyze_FinXX950/output/r12_FinXX_DSP950_meanbyclinicID.xlsx", sheet = "Sheet3")   ## CD45enr tumor
+d.finxx.CD45stroma <- read_excel("re_analyze_FinXX950/output/r12_FinXX_DSP950_meanbyclinicID.xlsx", sheet = "Sheet6")  ## CD45enr stroma
+
+d.finxx.tumor1 <- d.finxx.CD45tumor %>%  arrange(PatientID)
+d.finxx.stroma1 <- d.finxx.CD45stroma  %>%  arrange(PatientID)
+
+# Sheet1	tumor
+# Sheet2	stroma
+# Sheet3	CD45tumor
+# Sheet4	CD68tumor
+# Sheet5	tumortumor
+# Sheet6	CD45stroma
+# Sheet7	CD68stroma
+# Sheet8	allsegments
+
+
+```
+
+```{r  include =F,  echo = FALSE,  warning=FALSE, message=FALSE }
+## tidy data ------------------------------------------------------------------------------------
+
+d.finxx.tumor.match.HALO <-  merge(x=da1, y=d.finxx.tumor1, by=c("PatientID") ,  all.x=TRUE )
+d.finxx.stroma.match.HALO <-  merge(x=da1, y=d.finxx.stroma1, by=c("PatientID") ,  all.x=TRUE )
+print12 <- list(d.finxx.tumor.match.HALO,d.finxx.stroma.match.HALO )
+  #  write_xlsx(print12, paste0(Dir, "HALO/output/r4 data DSP Finxx CD45enr matched HALO.xlsx")) # very good writing ---
+
+```
+
+# Table 1: Find spearman correlation coefficient between CD45mm2stroma and DSP tumor protein counts
+
+```{r   include =T,  echo = FALSE,  warning=FALSE, message=FALSE,  fig.width=18, fig.height=6}
+
+ library(corrplot)
+
+dat <- d.finxx.tumor.match.HALO %>% rename(B2M = Beta_2_microglobulin)
+vars <- colnames(dat)
+ct_v <- c("PatientID" ,  "ER_status"  , "PR_status" , "HER2_status",  "DSP_used_or_not"  )
+cn_v <- vars[!(vars %in% ct_v)]
+ dat[ct_v] <- lapply(dat[ct_v], factor)
+ dat[cn_v] <- lapply(dat[cn_v], function(x) as.numeric(as.character(x)))  # as.numeric(paste(f)) if f =factor
+ 
+dat <- as.data.frame(dat) ## this line very important
+cols<-colnames(dat)[c(6,17:58)] ### CD45mm2stroma and  gene-names
+dat[cols] <- lapply(dat[cols], as.numeric)
+
+out<- NULL
+for (i in 17:58) {       
+        res <- cor.test(dat[,6], dat[,i],  method = "spearman")
+        p_value <- res$p.value
+        corr_coef <- res$estimate
+        test <- cbind(corr_coef, p_value)
+        out<-rbind(out, test)        
+}
+
+GeneName <- colnames(dat)[17:58]
+out<- cbind(GeneName,out)
+out <-as.data.frame(out)
+colnames(out) <- c('Protein_Name', 'Spearman.corr.coef_between.CD45mm2stroma.and.FinxxDSP CD45enrtumor.proteins', 'p_value')
+cn_v <- colnames(out)[2:3]
+out[cn_v] <- lapply(out[cn_v], function(x) as.numeric(as.character(x)))  # as.numeric(paste(f)) if f =factor
+out[ , 2:3] <- round(out[ , 2:3], digits=3)  ## make interger for the model
+out1 <- out
+# head(out1)
+
+
+```
+
+# Table 2: Find spearman correlation coefficient between CD45mm2stroma and DSP stroma protein counts
+
+```{r   include =T,  echo = FALSE,  warning=FALSE, message=FALSE,  fig.width=18, fig.height=6}
+
+ library(corrplot)
+
+dat <- d.finxx.stroma.match.HALO %>% rename(B2M = Beta_2_microglobulin)
+vars <- colnames(dat)
+ct_v <- c("PatientID" ,  "ER_status"  , "PR_status" , "HER2_status",  "DSP_used_or_not"  )
+cn_v <- vars[!(vars %in% ct_v)]
+ dat[ct_v] <- lapply(dat[ct_v], factor)
+ dat[cn_v] <- lapply(dat[cn_v], function(x) as.numeric(as.character(x)))  # as.numeric(paste(f)) if f =factor
+ 
+dat <- as.data.frame(dat) ## this line very important
+cols<-colnames(dat)[c(6,17:58)] ### CD45mm2stroma and  gene-names
+dat[cols] <- lapply(dat[cols], as.numeric)
+
+out<- NULL
+for (i in 17:58) {       
+        res <- cor.test(dat[,6], dat[,i],  method = "spearman")
+        p_value <- res$p.value
+        corr_coef <- res$estimate
+        test <- cbind(corr_coef, p_value)
+        out<-rbind(out, test)        
+}
+
+GeneName <- colnames(dat)[17:58]
+out<- cbind(GeneName,out)
+out <-as.data.frame(out)
+colnames(out) <- c('Protein_Name', 'Spearman.corr.coef_between.CD45mm2stroma.and.FinxxDSP CD45enrstroma.proteins', 'p_value')
+cn_v <- colnames(out)[2:3]
+out[cn_v] <- lapply(out[cn_v], function(x) as.numeric(as.character(x)))  # as.numeric(paste(f)) if f =factor
+out[ , 2:3] <- round(out[ , 2:3], digits=3)  ## make interger for the model
+out2 <- out
+# head(out2)
+out12 <- list(out1, out2)
+
+ #  write_xlsx(out12, paste0(Dir, "HALO/output/r4 Spearman corr coef between CD45mm2stroma.and.FinxxDSP CD45enr proteins.xlsx")) # very good writing ---
+
+
+```
+
+# Figure 1: Correlation plot between CD45mm2stroma and Finxx DSP tumor protein counts
+
+```{r   include =T,  echo = FALSE,  warning=FALSE, message=FALSE,  fig.width=12, fig.height=6}
+
+ library(corrplot)
+
+dat <- d.finxx.tumor.match.HALO %>% rename(B2M = Beta_2_microglobulin)
+vars <- colnames(dat)  # colnames(dat)
+ct_v <- c("PatientID" ,  "ER_status"  , "PR_status" , "HER2_status",  "DSP_used_or_not"  )
+cn_v <- vars[!(vars %in% ct_v)]
+ dat[ct_v] <- lapply(dat[ct_v], factor)
+ dat[cn_v] <- lapply(dat[cn_v], function(x) as.numeric(as.character(x)))  # as.numeric(paste(f)) if f =factor
+ dat <- na.omit(dat)  ## remov
+lpp_axis1 <- dat %>% dplyr::select( CD45pos_mm2,  CD45pos_mm2_tumor,  CD45pos_mm2_stroma, CD68pos_mm2, CD68pos_mm2_tumor,
+                                                             CD68pos_mm2_stroma  )
+                               
+lpp_axis2 <- dat %>% dplyr::select(-PatientID,	-CD45pos_mm2,	-CD68pos_mm2	, -CD45pos_mm2_tumor	, -CD68pos_mm2_tumor	, -CD45pos_mm2_stroma	, -CD68pos_mm2_stroma	, -pT_TumorSizeScore	, -pN_LymphNodeStatusScore	, -HistologicalGrade	, -ER_status	, -PR_status	, -HER2_status	, -Censor_RFS	, -RFS_days	, -DSP_used_or_not)
+
+corr_gamb <- cor(lpp_axis1, lpp_axis2,  method = "spearman")
+
+corrplot(corr_gamb, tl.col = "black",   tl.cex=1,    method = "circle",  tl.srt = 90, cl.align.text = "c", cl.ratio = 0.15,
+          rect.lwd = 2,  pch = 2,  pch.col = "black", pch.cex = 1, cl.offset =2, number.cex = 1,
+      number.font = 1, number.digits = 2, 
+         title =  "\n\n Correlation Plot of HALO and Finxx DSP CD45enr Tumor Data \n",
+         type = "full"
+          )  # addCoef.col = "black",
+
+out.corr.HALOtumor <- corr_gamb
+```
+
+# Figure 2: Correlation plot between CD45mm2stroma and  Finxx DSP stroma protein counts
+
+```{r   include =T,  echo = FALSE,  warning=FALSE, message=FALSE,  fig.width=12, fig.height=6}
+
+ library(corrplot)
+
+dat <- d.finxx.stroma.match.HALO %>% rename(B2M = Beta_2_microglobulin)
+vars <- colnames(dat)  # colnames(dat)
+ct_v <- c("PatientID" ,  "ER_status"  , "PR_status" , "HER2_status",  "DSP_used_or_not"  )
+cn_v <- vars[!(vars %in% ct_v)]
+ dat[ct_v] <- lapply(dat[ct_v], factor)
+ dat[cn_v] <- lapply(dat[cn_v], function(x) as.numeric(as.character(x)))  # as.numeric(paste(f)) if f =factor
+
+ dat <- na.omit(dat)  ## remove na , for corr calculation
+lpp_axis1 <- dat %>% dplyr::select( CD45pos_mm2,  CD45pos_mm2_tumor,  CD45pos_mm2_stroma, CD68pos_mm2, CD68pos_mm2_tumor,
+                                                             CD68pos_mm2_stroma  )
+                               
+lpp_axis2 <- dat %>% dplyr::select(-PatientID,	-CD45pos_mm2,	-CD68pos_mm2	, -CD45pos_mm2_tumor	, -CD68pos_mm2_tumor	, -CD45pos_mm2_stroma	, -CD68pos_mm2_stroma	, -pT_TumorSizeScore	, -pN_LymphNodeStatusScore	, -HistologicalGrade	, -ER_status	, -PR_status	, -HER2_status	, -Censor_RFS	, -RFS_days	, -DSP_used_or_not)
+
+corr_gamb <- cor(lpp_axis1, lpp_axis2,  method = "spearman")
+
+corrplot(corr_gamb, tl.col = "black",   tl.cex=1,    method = "circle",  tl.srt = 90, cl.align.text = "c", cl.ratio = 0.15,
+          rect.lwd = 2,  pch = 2,  pch.col = "black", pch.cex = 1, cl.offset =2, number.cex = 1,
+      number.font = 1, number.digits = 2, 
+         title =  "\n\n Correlation Plot for HALO and Finxx DSP CD45enr stroma Data \n",
+         type = "full"
+          )  # addCoef.col = "black",
+
+out.corr.HALOstroma <- corr_gamb
+
+# head(out.corr.HALOstroma)
+out.corr.HALOtumor <- as.data.frame(out.corr.HALOtumor)
+out.corr.HALOstroma <- as.data.frame(out.corr.HALOstroma)
+out12 <- list(out.corr.HALOtumor, out.corr.HALOstroma)
+
+ #  write_xlsx(out12, paste0(Dir, "HALO/output/s214070r4 Spearman corr coef between HALO and.FinxxDSP CD45enr.xlsx")) # very good writing ---
+
+
+
+```

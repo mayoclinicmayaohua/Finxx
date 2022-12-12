@@ -1,0 +1,607 @@
+---
+title: " Yaohua Ma, M.S \\\nDivision of Biomedical Statistics and Informatics \\\nMayo Clinic, Jacksonville \\\nExtension 3-0453    \\\nMa.Yaohua@mayo.edu"
+
+
+subtitle: "Date:      05/04/2020	\\\n From:    Yaohua Ma  \\\nTo:      Dr. Thompson  \\\nRe:       HALO FinXX re-analysis (ADS#214070)"
+
+
+output: 
+   word_document:
+           reference_doc: ~/R/rpgm/rmd_template2.docx 
+           
+---
+
+```{r setup, include=FALSE , echo = FALSE,  warning=FALSE, message=FALSE}
+## STUDYADDRESS: /projects/bsi/fl/studies/s214070.Thompson.DSP2/re_analyze_FinXX950/data
+## INVESTIGATOR:  Dr. Thompson
+## STATISTICIAN:  Yaohua Ma
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_chunk$set(echo = F, warning=FALSE, message=FALSE )
+#Clear existing data and graphics
+ rm(list=ls())
+ graphics.off()
+ 
+ # install.packages("meta")
+
+library(ggplot2)
+library(readxl)
+library(writexl)
+library(tidyverse)
+library(dplyr)
+library(forestplot)
+setwd("/projects/bsi/fl/studies/s214070.Thompson.DSP2")
+
+## 29 protein tumor vs stroma, log2FC
+d1 <-  read_excel ( "re_analyze_FinXX950/output/report1_FinXX_DSP950_log2FC_r9tumorvsstroma.xlsx", sheet = "Sheet6") 
+d2 <-  read_excel ( "re_analyze_FinXX950/output/report1_FinXX_DSP950_log2FC_r9tumorvsstroma.xlsx", sheet = "Sheet7")
+d3 <-  read_excel ( "re_analyze_FinXX950/output/report1_FinXX_DSP950_log2FC_r9tumorvsstroma.xlsx", sheet = "Sheet8")
+d4 <-  read_excel ( "re_analyze_FinXX950/output/report1_FinXX_DSP950_log2FC_r9tumorvsstroma.xlsx", sheet = "Sheet9")
+d5 <-  read_excel ( "re_analyze_FinXX950/output/report1_FinXX_DSP950_log2FC_r9tumorvsstroma.xlsx", sheet = "Sheet10")
+
+d4_TNBC29 <-  read_excel ("DSP756Apr3_2020/output/report1_TNBC_TMA_DSP756_log2FC_r2.xlsx", sheet = "Sheet4")
+d5_TNBC29 <-  read_excel ( "DSP756Apr3_2020/output/report1_TNBC_TMA_DSP756_log2FC_r2.xlsx", sheet = "Sheet5")
+d6_TNBC29 <-  read_excel( "DSP756Apr3_2020/output/report1_TNBC_TMA_DSP756_log2FC_r2.xlsx", sheet = "Sheet6")
+ 
+###  ------------------Sheet4	All_seg_tumor_vs_stroma_28protein	TGFB1 not in 756 DSP data . so get final 28 proteins
+###  -----------------Sheet5	Tumor_RFSyes_vs_no_28protein	TGFB1 not in 756 DSP data . so get final 28 proteins
+###  -----------------Sheet6	Stroma_RFSyes_vs_no_28protein	TGFB1 not in 756 DSP data . so get final 28 proteins
+
+ProteinName29 <- read_excel ("re_analyze_FinXX950/data/proteinname29ordered.xlsx",sheet = "Sheet1" )   ## used for each function Finxx forest 
+ProteinName28 <- read_excel ("re_analyze_FinXX950/data/proteinname29ordered.xlsx",sheet = "Protein28" )   ## used for each function TNBC  forest
+
+
+fun_makedataforforest <- function(dat ,  ProteinName) {
+ # dat <- as.data.frame(dat)
+#count <- dat[which(dat$p_value <= 0.05), ]   dat <- d1 head(dat)
+ dat <- dat %>% arrange(protein_name) ## make proteinname as alphabetical order
+ dat <- dat[c(2,1,3:29), ]  ## make B7H3 to second row, B2M= beta-2-microglobul go to first row
+count<- as.data.frame(dat)
+label <- ProteinName[,1]
+mean <- count[,5]
+lower <- count[,6]
+upper <- count[,7]
+anno <- count[,9]
+plot <- data.frame(label, mean, lower, upper, anno)
+colnames(plot)<-c("label","mean", "lower", "upper", "anno") # colnames(df) have to be behind df
+return(plot)
+}    ### work for all data-make
+
+
+
+```
+
+
+# Figure 1:  Finxx DSP AllTumor vs. AllStroma 
+
+```{r echo=FALSE ,  warning=FALSE, message=FALSE, fig.width=6, fig.height=6}
+vignette("forestplot",  package="forestplot")
+library(forestplot)
+own <- fpTxtGp()   ## own for all forestplot below ---------
+own$ticks$cex <- 1.2
+own$xlab$cex <- 1.2
+own$title$cex <- 1.5
+own$title$just <- "center"
+own$title$fontface <- "bold"  ## own for all forestplot below ---------make title bold
+own$label$fontface <- "bold"  ## make tabletext bold
+own$ticks$fontface <- "bold"   ## make x-axis number bold
+own$xlab$fontface <- "bold"    ## make x-anno text bold 
+#    ## own for all forestplot below -----make tabletext bold
+# library(meta)
+library(grid)
+library(gridExtra)
+library(dplyr)
+plot <- fun_makedataforforest(dat=d1,  ProteinName= ProteinName29) #################################################### given data --- important---
+plot$label<-as.character(plot$label)
+plot$anno<-as.character(plot$anno)
+tabletext <- c("ProteinName", plot$label)     # tabletext <- cbind(c("ProteinName", plot$label),  c("Log2FC(95%CI)", plot$anno))
+xticks1 <- seq(from=-2.5, to=3, by=0.5)
+
+                forestplot(tabletext, graph.pos = 2,
+                  mean=c(NA, plot$mean),
+                  lower=c(NA, plot$lower),
+                  upper=c(NA, plot$upper), zero=0,
+                  cex=1.5, col = fpColors(lines="blue"),
+                  txt_gp = own,
+                  boxsize=0.25,
+                  vertices=TRUE,
+                  xticks=xticks1, xlab="Log2 Fold Change",
+                  title=" ")
+
+# grid.grabExpr(plot1)
+# print(plot1)
+
+# ---------------forest 1 done ---------------------tumor vs stroma -----------
+```
+
+
+# Figure 2:   Finxx DSP CD45Stroma vs. CD68Stroma
+
+```{r echo=FALSE ,  warning=FALSE, message=FALSE, fig.width=6, fig.height=6}
+
+library(meta)
+library(grid)
+library(gridExtra)
+plot <- fun_makedataforforest(dat=d5,  ProteinName= ProteinName29) #################################################### given data --- important---
+plot$label<-as.character(plot$label)
+plot$anno<-as.character(plot$anno)
+tabletext <- c("ProteinName", plot$label)     # tabletext <- cbind(c("ProteinName", plot$label),  c("Log2FC(95%CI)", plot$anno))
+xticks1 <- seq(from=-2.5, to=2.5, by=0.5)
+ forestplot(tabletext, graph.pos = 2,
+                  mean=c(NA, plot$mean),
+                  lower=c(NA, plot$lower),
+                  upper=c(NA, plot$upper), zero=0,
+                  cex=1.5, col = fpColors(lines="blue"),
+                  txt_gp = own,
+                  boxsize=0.25,
+                  vertices=TRUE,
+                  xticks=xticks1, xlab="Log2 Fold Change",
+                  title=" ")
+
+# grid.grabExpr(plot1)
+
+# ---------------forest 1 done ---------------------tumor vs stroma -----------
+```
+
+
+# Figure 3:  Finxx DSP CD45Tumor vs. CD68Tumor
+
+```{r echo=FALSE ,  warning=FALSE, message=FALSE, fig.width=6, fig.height=6}
+
+library(meta)
+library(grid)
+library(gridExtra)
+plot <- fun_makedataforforest(dat=d2,  ProteinName= ProteinName29) #################################################### given data --- important---
+plot$label<-as.character(plot$label)
+plot$anno<-as.character(plot$anno)
+tabletext <- c("ProteinName", plot$label)     # tabletext <- cbind(c("ProteinName", plot$label),  c("Log2FC(95%CI)", plot$anno))
+xticks1 <- seq(from=-2.5, to=2.5, by=0.5)
+ forestplot(tabletext, graph.pos = 2,
+                  mean=c(NA, plot$mean),
+                  lower=c(NA, plot$lower),
+                  upper=c(NA, plot$upper), zero=0,
+                  cex=1.5, col = fpColors(lines="blue"),
+                  txt_gp = own,
+                  boxsize=0.25,
+                  vertices=TRUE,
+                  xticks=xticks1, xlab="Log2 Fold Change",
+                  title=" ")
+
+# grid.grabExpr(plot1)
+
+# ---------------forest 1 done ---------------------tumor vs stroma -----------
+```
+
+
+# Figure 4:  Finxx DSP CD45Tumor vs. Tumor w/o Stroma  
+
+```{r echo=FALSE ,  warning=FALSE, message=FALSE, fig.width=6, fig.height=6}
+
+library(meta)
+library(grid)
+library(gridExtra)
+plot <- fun_makedataforforest(dat=d3,  ProteinName= ProteinName29) #################################################### given data --- important---
+plot$label<-as.character(plot$label)
+plot$anno<-as.character(plot$anno)
+tabletext <- c("ProteinName", plot$label)     # tabletext <- cbind(c("ProteinName", plot$label),  c("Log2FC(95%CI)", plot$anno))
+xticks1 <- seq(from=-0.5, to=2.5, by=0.5)
+# plot1 <- 
+forestplot(tabletext, graph.pos = 2,
+                  mean=c(NA, plot$mean),
+                  lower=c(NA, plot$lower),
+                  upper=c(NA, plot$upper), zero=0,
+                  cex=1.5, col = fpColors(lines="blue"),
+                  txt_gp = own,
+                  boxsize=0.25,
+                  vertices=TRUE,
+                  xticks=xticks1, xlab="Log2 Fold Change",
+                  title=" ")
+
+#grid.grabExpr(plot1)
+
+# ---------------forest 1 done ---------------------tumor vs stroma -----------
+```
+
+
+# Figure 5: Finxx DSP CD68Tumor vs. Tumor w/o Stroma
+  
+```{r echo=FALSE ,  warning=FALSE, message=FALSE, fig.width=6, fig.height=6}
+
+library(meta)
+library(grid)
+library(gridExtra)
+plot <- fun_makedataforforest(dat=d4,  ProteinName= ProteinName29) #################################################### given data --- important---
+plot$label<-as.character(plot$label)
+plot$anno<-as.character(plot$anno)
+tabletext <- c("ProteinName", plot$label)     # tabletext <- cbind(c("ProteinName", plot$label),  c("Log2FC(95%CI)", plot$anno))
+xticks1 <- seq(from=-0.5, to=2, by=0.5)
+ forestplot(tabletext, graph.pos = 2,
+                  mean=c(NA, plot$mean),
+                  lower=c(NA, plot$lower),
+                  upper=c(NA, plot$upper), zero=0,
+                  cex=1.5, col = fpColors(lines="blue"),
+                  txt_gp = own,
+                  boxsize=0.25,
+                  vertices=TRUE,
+                  xticks=xticks1, xlab="Log2 Fold Change",
+                  title=" ")
+
+#grid.grabExpr(plot1)
+
+# ---------------forest 1 done ---------------------tumor vs stroma -----------
+```
+
+
+# Figure 6A:  TNBC TMA DSP Tumor vs. Stroma 
+  
+```{r echo=FALSE ,  warning=FALSE, message=FALSE, fig.width=6, fig.height=6}
+fun_makedataforforest <- function(dat, ProteinName ) {
+ # dat <- as.data.frame(dat)
+#count <- dat[which(dat$p_value <= 0.05), ]   dat <- d1 head(dat)
+ dat <- dat %>% arrange(protein_name) ## make proteinname as alphabetical order
+ dat <- dat[c(2,1,3:28), ]  ## make B7H3 to second row, B2M= beta-2-microglobul go to first row
+count<- as.data.frame(dat)
+label <- ProteinName[,1]
+mean <- count[,5]
+lower <- count[,6]
+upper <- count[,7]
+anno <- count[,9]
+plot <- data.frame(label, mean, lower, upper, anno)
+colnames(plot)<-c("label","mean", "lower", "upper", "anno") # colnames(df) have to be behind df
+return(plot)
+}    ### work for all data-make
+
+
+
+library(meta)
+library(grid)
+library(gridExtra)
+
+plot <- fun_makedataforforest(dat=d4_TNBC29,  ProteinName= ProteinName28) ################################### given data --- important---
+plot$label<-as.character(plot$label)
+plot$anno<-as.character(plot$anno)
+tabletext <- c("ProteinName", plot$label)     # tabletext <- cbind(c("ProteinName", plot$label),  c("Log2FC(95%CI)", plot$anno))
+xticks1 <- seq(from=-2, to=4, by=0.5)
+#plot1 <- 
+forestplot(tabletext, graph.pos = 2,
+                  mean=c(NA, plot$mean),
+                  lower=c(NA, plot$lower),
+                  upper=c(NA, plot$upper), zero=0,
+                  cex=1.5, col = fpColors(lines="blue"),
+                  txt_gp = own,
+                  boxsize=0.25,
+                  vertices=TRUE,
+                  xticks=xticks1, xlab="Log2 Fold Change",
+                  title=" ")
+
+#grid.grabExpr(plot1)
+
+# ---------------forest 1 done ---------------------tumor vs stroma -----------
+```
+
+
+# Figure 6B: TNBC TMA DSP Tumor RFS-yes vs RFS-no   
+  
+```{r echo=FALSE ,  warning=FALSE, message=FALSE, fig.width=6, fig.height=6}
+
+
+library(meta)
+library(grid)
+library(gridExtra)
+
+  dat <- d5_TNBC29
+ 
+ dat <- dat %>% arrange(protein_name) ## make proteinname as alphabetical order
+ dat <- dat[c(2,1,3:28), ]  ## make B7H3 to second row, B2M= beta-2-microglobul go to first row
+count<- as.data.frame(dat)
+label <- ProteinName28[,1]
+mean <- count[,5]
+lower <- count[,6]
+upper <- count[,7]
+anno <- count[,9]
+pvalue <- count[,10]
+plot <- data.frame(label, mean, lower, upper, anno, pvalue)
+##  plot <- plot[which(plot$pvalue <= 0.05), ]   
+colnames(plot)<-c("label","mean", "lower", "upper", "anno", "pvalue") # colnames(df) have to be behind df
+################################################### given data --- important---
+plot$label<-as.character(plot$label)
+plot$anno<-as.character(plot$anno)
+tabletext <- c("ProteinName", plot$label)     # tabletext <- cbind(c("ProteinName", plot$label),  c("Log2FC(95%CI)", plot$anno))
+xticks1 <- seq(from=-1, to=1.5, by=0.5)
+#plot1 <-
+forestplot(tabletext, graph.pos = 2,
+                  mean=c(NA, plot$mean),
+                  lower=c(NA, plot$lower),
+                  upper=c(NA, plot$upper), zero=0,
+                  cex=1.5, col = fpColors(lines="blue"),
+                  txt_gp = own,
+                  boxsize=0.25,
+                  vertices=TRUE,
+                  xticks=xticks1, xlab="Log2 Fold Change",
+                  title=" ")
+
+#grid.grabExpr(plot1)
+
+# ---------------forest 1 done ---------------------tumor vs stroma -----------
+```
+
+
+# Figure 6C: TNBC TMA DSP Stroma RFS-yes vs RFS-no   
+  
+```{r echo=FALSE ,  warning=FALSE, message=FALSE, fig.width=6, fig.height=6}
+
+
+library(meta)
+library(grid)
+library(gridExtra)
+
+  dat <- d6_TNBC29
+ 
+ dat <- dat %>% arrange(protein_name) ## make proteinname as alphabetical order
+ dat <- dat[c(2,1,3:28), ]  ## make B7H3 to second row, B2M= beta-2-microglobul go to first row
+count<- as.data.frame(dat)
+label <- ProteinName28[,1]
+mean <- count[,5]
+lower <- count[,6]
+upper <- count[,7]
+anno <- count[,9]
+pvalue <- count[,10]
+plot <- data.frame(label, mean, lower, upper, anno, pvalue)
+##  plot <- plot[which(plot$pvalue <= 0.05), ]   
+colnames(plot)<-c("label","mean", "lower", "upper", "anno", "pvalue") # colnames(df) have to be behind df
+################################################### given data --- important---
+plot$label<-as.character(plot$label)
+plot$anno<-as.character(plot$anno)
+tabletext <- c("ProteinName", plot$label)     # tabletext <- cbind(c("ProteinName", plot$label),  c("Log2FC(95%CI)", plot$anno))
+xticks1 <- seq(from=-1, to=1, by=0.5)
+#plot1 <-
+                forestplot(tabletext, graph.pos = 2,
+                  mean=c(NA, plot$mean),
+                  lower=c(NA, plot$lower),
+                  upper=c(NA, plot$upper), zero=0,
+                  cex=1.5, col = fpColors(lines="blue"),
+                  txt_gp = own,
+                  boxsize=0.25,
+                  vertices=TRUE,
+                  xticks=xticks1, xlab="Log2 Fold Change",
+                  title=" ")
+
+#grid.grabExpr(plot1)
+
+# ---------------forest 1 done ---------------------tumor vs stroma -----------
+```
+
+
+# Figure 8: KM curve for relapse free survival by CD45+ Cells/mm2 median
+
+ 
+```{r echo=FALSE ,  warning=FALSE, message=FALSE, fig.width=6, fig.height=4}
+ 
+d1 <- read_excel("/projects/bsi/fl/studies/s214070.Thompson.DSP2/re_analyze_FinXX950/data/HALO_FinXX_Cleaneddata_group.xlsx", sheet = "Sheet2")  #
+
+d1 <- d1 %>% dplyr::select(Tag, CD45posCKnegCD68neg_per_mm2, CD68posCKneg_per_mm2, gp_CD45posCKnegCD68neg, gp_CD68posCKneg ) %>%
+            arrange(Tag) %>%
+            rename(PatientID = Tag,  CD45p_mm2 = gp_CD45posCKnegCD68neg, CD68p_mm2 = gp_CD68posCKneg)
+d1$CD45p_mm2 <- factor(d1$CD45p_mm2, levels = c("lower", "middle", "upper"), labels = c("Low", "Mid", "High"))
+d1$CD68p_mm2 <- factor(d1$CD68p_mm2, levels = c("lower", "middle", "upper"), labels = c("Low", "Mid", "High"))
+# colnames(d1)  ## check data
+# table(d1$CD45p_mm2)
+
+d44RFS <- read_excel("/projects/bsi/fl/studies/s211340_thompson_DSP/DSPsurvivalRFS_Final44sample_45protein_950segment/data/r5_DSP_data_final_44_samples.xlsx")
+d44RFS <- d44RFS %>% arrange (PatientID)
+# colnames(d44RFS)
+d12 <- merge(x=d1, y=d44RFS, by="PatientID", all.x=TRUE)
+d12 <-  d12 %>% mutate(RFS_c = 1-Censor_RFS )
+#head(d12)
+
+ med45 <- median(d12$CD45posCKnegCD68neg_per_mm2)
+ med68 <- median(d12$CD68posCKneg_per_mm2)
+ d12_med <-  d12 %>% mutate(CD45posCKnegCD68neg = case_when(
+              CD45posCKnegCD68neg_per_mm2 < med45 ~ "Low",
+              CD45posCKnegCD68neg_per_mm2 >= med45 ~ "High")) %>%
+           mutate(CD68posCKneg = case_when(
+              CD68posCKneg_per_mm2 < med68 ~ "Low",
+              CD68posCKneg_per_mm2 >= med68 ~ "High"))
+```
+
+```{r echo=FALSE ,  warning=FALSE, message=FALSE, fig.width=8, fig.height=6}
+# table(d12_med$CD45posCKnegCD68neg)
+# table(d12_med$CD68posCKneg)
+library(survminer)
+library(survival)
+os_fit <- survfit(Surv(time=RFS_years , event=RFS_c) ~ CD45posCKnegCD68neg  , data=d12_med)
+## Overall Group
+os <- ggsurvplot(os_fit,
+                 fun=function(y) y*100,
+                 #fun = function(x) {1 - x},
+                 xlab="RFS  years",
+                 ylab="Survival Probability (%)",
+                 linetype = c(1,  1),
+                 palette=c( "black" ,  "red"),
+                 legend.title="",
+                 legend = c(0.15,0.25),
+                 legend.labs=c(  "High" ,  "Low"),
+                 font.legend = c(16, "bold", "black"),
+                 censor = FALSE,
+                 risk.table = TRUE,
+                 risk.table.title = "                         Number at Risk",
+                 risk.table.fontsize =9,
+                 risk.table.height =.2,
+
+                 font.x = c(16, "bold", "black"),  ## can be "bold.italic",
+                 font.y = c(16, "bold", "black"),   ## can be "red", "darked"
+                 font.tickslab = c(16, "bold", "black"),
+                 break.time.by=2,
+                 xlim=c(0, 10),
+                 pval=TRUE,
+                 ylim=c(0,100),
+                 pval.coord = c(0.25, 2),
+                 pval.size = 7.5,
+                 font.pval = "bold",
+                 title=" ",
+                 tables.theme=theme_cleantable(),
+                 axes.offset=TRUE,
+                 tables.y.text=FALSE)
+os$plot <- os$plot + theme(plot.margin = unit(c(5.5, 5.5, 5.5, 50), "points"),
+                           plot.title= element_text(hjust=.5, color="black", size = 12, face="bold"),
+                           axis.text = element_text( color="black", size = 12, face="bold"))+
+  theme(#legend.position="right",
+    legend.title = element_text(colour="black", size=16,  face="bold") ,
+    legend.text = element_text(colour="black", size=16,  face="bold"))
+os$table <- os$table +
+  theme(plot.title = element_text(size = 16, color = "black", face = "bold", hjust = -0.25),  ## hold  size of number at risk 
+        plot.margin = unit(c(5.5, 5.5, 5.5, 50), "points"),
+        legend.text = element_text(colour="black", size=12,  face="bold"))
+
+print(os)
+
+
+```
+
+
+# Figure 9: KM curve for relapse free survival by CD45+ Cells/mm2 Tertile
+  
+```{r echo=FALSE ,  warning=FALSE, message=FALSE, fig.width=8, fig.height=6}
+
+library(survminer)
+library(survival)
+
+os_fit <- survfit(Surv(time=RFS_years , event=RFS_c) ~ CD45p_mm2  , data=d12)
+## Overall Group
+os <- ggsurvplot(os_fit,
+                 fun=function(y) y*100,
+                 #fun = function(x) {1 - x},
+                 xlab="RFS  years",
+                 ylab="Survival Probability (%)",
+                 linetype = c(1, 1, 1),
+                 palette=c("red", "blue", "black"),
+                 legend.title="",
+                 legend = c(0.1,0.3),
+                 legend.labs=c( "Low", "Mid", "High"),
+                 font.legend = c(16, "bold", "black"),
+                 censor = FALSE,
+                 risk.table = TRUE,
+                 risk.table.title = "                       Number at Risk",
+                 risk.table.fontsize = 9,  ## change number font size
+                 risk.table.height =.25,
+
+                 font.x = c(16, "bold", "black"),  ## can be "bold.italic",
+                 font.y = c(16, "bold", "black"),   ## can be "red", "darked"
+                 font.tickslab = c(16, "bold", "black"),
+                 break.time.by=2,
+                 xlim=c(0, 10),
+                 pval=TRUE,
+                 ylim=c(0,100),
+                 pval.coord = c(0.1, 1),
+                 pval.size = 7.5,
+                 
+                 title=" ",
+                 tables.theme=theme_cleantable(),
+                 axes.offset=TRUE,
+                 tables.y.text=FALSE)
+os$plot <- os$plot + theme(plot.margin = unit(c(5.5, 5.5, 5.5, 50), "points"),
+                           plot.title= element_text(hjust=.5,color="black", size = 12, face="bold"),
+                           axis.text = element_text( color="black", size = 16, face="bold"),
+                           legend.title = element_text(colour="black", size=16,  face="bold") ,
+                           legend.text = element_text(colour="black", size=16,  face="bold"))    # chenge high low
+             #  annotate("text", x = 10, y = 15, label = "P-value",  vjust=0, hjust = 1.1, face = "bold", fontface=16)  ## add some the figure
+            #  legend.position="right",
+  
+ 
+os$table <- os$table +
+             theme(plot.margin = unit(c(5.5, 5.5, 5.5, 50), "points"),
+                   plot.title = element_text(size = 16, color = "black", face = "bold", hjust = -0.25), 
+                   legend.text = element_text(colour="black", size=16,  face="bold"))
+
+
+
+print(os)
+
+
+
+# ---------------forest 1 done ---------------------tumor vs stroma -----------
+```
+
+```{r include=FALSE,  echo=FALSE ,  warning=FALSE, message=FALSE, fig.width=8, fig.height=6}
+library(survminer)
+library(survival)
+
+os_fit <- survfit(Surv(time=RFS_years , event=RFS_c) ~ CD45p_mm2  , data=d12)
+## Overall Group
+os <- ggsurvplot(os_fit,
+                 fun=function(y) y*100,
+                 #fun = function(x) {1 - x},
+                 main="main",
+                 submain ="submain",
+                 caption="caption",
+                 xlab="RFS  years",
+                 ylab="Survival Probability (%)",
+                 linetype = c(1, 1, 1),
+                 palette=c("red", "blue", "black"),
+                 legend.title="legend.title",
+                 legend = c(0.1,0.3),
+                 legend.labs=c( "Low", "Mid", "High"),
+                 font.legend = c(16, "bold", "black"),
+                 censor = FALSE,
+                 risk.table = TRUE,
+                 risk.table.title = "                       Number at Risk",
+                 risk.table.fontsize = 9,  ## change number font size
+                 risk.table.height =.25,
+
+                 font.x = c(16, "bold", "black"),  ## can be "bold.italic",
+                 font.y = c(16, "bold", "black"),   ## can be "red", "darked"
+                 font.tickslab = c(16, "bold", "black"),
+                 break.time.by=2,
+                 xlim=c(0, 10),
+                 pval=TRUE,
+                 ylim=c(0,100),
+                 break.y.by=20,
+                 pval.coord = c(0.1, 1),
+                 pval.size = 7.5,
+                 
+                 pval.font =    c(26, "bold", "black"),
+                 title="title",
+                 tables.theme=theme_cleantable(),
+                 axes.offset=TRUE,
+                 tables.y.text=FALSE)
+
+print(os)
+  os <- os + theme_survminer(font.main = c(16,  "bold", "black"), font.submain = c(15, "bold", "black"), 
+                     font.x = c(14, "bold", "black"), font.y = c(14, "bold", "black"),
+                     font.caption = c(15, "bold", "black"), font.tickslab = c(12, "bold", "black"), 
+                    legend= c("bottom") ,  #legend = c("top", "bottom", "left", "right", "none"),  ## bold or plain
+                     font.legend = c(15, "bold", "black") )
+ 
+  print(os)
+ os$plot <- os$plot + theme(plot.margin = unit(c(5.5, 5.5, 5.5, 50), "points"),
+                           plot.title= element_text(hjust=.5,color="black", size = 12, face="bold"),
+                           axis.text = element_text( color="black", size = 16, face="bold"),
+                           legend.title = element_text(colour="black", size=16,  face="bold") ,
+                           legend.text = element_text(colour="black", size=16,  face="bold"))    # chenge high low
+             #  annotate("text", x = 10, y = 15, label = "P-value",  vjust=0, hjust = 1.1, face = "bold", fontface=16)  ## add some the figure
+            #  legend.position="right",
+ os$plot   
+
+
+os$table <- os$table +
+             theme(plot.margin = unit(c(5.5, 5.5, 5.5, 50), "points"),
+                   plot.title = element_text(size = 16, color = "black", face = "bold", hjust = -0.25), 
+                   legend.text = element_text(colour="black", size=16,  face="bold"))
+
+os$table
+
+print(os)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+

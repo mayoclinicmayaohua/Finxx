@@ -1,0 +1,160 @@
+---
+title: "Finxx project"
+author: "Yaohua Ma"
+date: "07/12/2020"
+output: html_document
+---
+
+
+
+```{r  include =FALSE,  echo = FALSE,  warning=FALSE, message=FALSE  , fig.width=8, fig.height=6 }
+
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_chunk$set(echo = F)
+#Clear existing data and graphics
+rm(list=ls())
+graphics.off()
+
+## find good distribution figure
+library(ggplot2)
+library(readr)
+library(readxl)
+library(writexl)
+library(tidyverse)
+library(dplyr)
+library(ggridges)
+# getwd()
+setwd("/projects/bsi/fl/studies/s214070.Thompson.DSP2")
+
+d1_Finxxtumor  <- read_excel("re_analyze_FinXX950/output/r12_FinXX_DSP950_meanbyclinicID.xlsx", sheet ="Sheet1")  ## read data Finxx tumor mean byID  for  gene/protein
+d1_Finxxstroma  <- read_excel("re_analyze_FinXX950/output/r12_FinXX_DSP950_meanbyclinicID.xlsx", sheet ="Sheet2")  ## read data  Finxx stroma  mean for each  gene/protein
+
+```
+
+Figure 1A: distribution plot for 10 proteins in FinXX tumor cohort based on sample ID level
+
+
+```{r   echo = FALSE,  warning=FALSE, message=FALSE  , fig.width=6, fig.height=8 }
+
+d1 <- d1_Finxxtumor %>% dplyr::rename(B2M = Beta_2_microglobulin)  ## given data 
+
+d56 <- d1 %>% dplyr::select(Censor_RFS,  B2M, CD11c, CD20, CD40,  CD56, GZMB, HLA_DR, ICOS, IDO1, PD_L2)
+# d_dist <-  d56 %>% pivot_longer(c(`CD56`, `HLA_DR` , `CD40`), names_to = "marker", values_to = "expression")
+library(reshape2)
+d_dist <- melt(d56, id.vars = c("Censor_RFS"), variable.name = "marker",   value.name = "expression")   ## very good tidy method = gather
+cn_v <- c("expression")
+d_dist[cn_v] <- lapply(d_dist[cn_v], function(x) as.numeric(as.character(x)))  # as.numeric(paste(f)) if f =factor
+d_dist <- d_dist %>% arrange(marker) %>% dplyr::rename(RFS_Status =Censor_RFS )
+
+d_dist$RFS_Status <- factor(d_dist$RFS_Status, levels = 0:1, labels = c(  "RFS=No", "RFS=Yes"))
+d_dist$marker <- factor(d_dist$marker ,  levels = c("B2M", "CD11c" , "CD20",  "CD40" ,  "CD56" ,  "GZMB", "HLA_DR", "ICOS", "IDO1", "PD_L2" ), labels =c("B2M", "CD11c" , "CD20",  "CD40" ,  "CD56" ,  "GZMB", "HLA-DR", "ICOS", "IDO1", "PD-L2" ))
+cn_v <- c("expression")
+d_dist[cn_v] <- lapply(d_dist[cn_v], function(x) as.numeric(as.character(x)))  # as.numeric(paste(f)) if f =factor
+
+ggplot(data=d_dist, aes(x=log2(expression), y=marker, color=RFS_Status, point_color=RFS_Status, fill=RFS_Status))+
+  geom_density_ridges( scale = .95, rel_min_height = .01, point_shape = "|", point_size = 0.1, size = 0.3, quantile_lines = FALSE, quantiles = 1, alpha=0.2)+
+  theme_ridges(grid = FALSE) +
+  scale_fill_manual(values=c('#3498DB','black')) +
+  scale_color_manual(values=c('#3498DB','black')) +
+  xlab("Log2(expression) in Tumor            ") +
+  ylab(" ") +  xlim(2.5,15)+
+  ggtitle(" ") +
+   theme(plot.margin = unit(c(5.5, 5.5, 5.5, 50), "points"),
+          plot.title = element_text(size = 12, color = "black", face = "bold", hjust = -0.25), 
+           axis.text = element_text( color="black", size = 12, face="bold"),
+         axis.title.x = element_text(color="black", size = 12, face="bold"),
+         axis.title.y = element_text(color="black", size = 12, face="bold"),
+           # legend.position = c(12.5, 7),
+          legend.position="right",
+           legend.title = element_text(colour="black", size=12,  face="bold") ,
+           legend.text = element_text(colour="black", size=12,  face="bold"))
+
+  
+```
+
+
+Figure 1B: distribution plot for 10 proteins in FinXX stroma cohort based on sample ID level
+
+```{r   echo = FALSE,  warning=FALSE, message=FALSE, fig.width=6, fig.height=8}
+
+## find good distribution figure
+d1 <-  d1_Finxxstroma %>% rename(B2M = Beta_2_microglobulin)  ## given data 
+
+d56 <- d1 %>% dplyr::select(Censor_RFS,  B2M, CD11c, CD20, CD40,  CD56, GZMB, HLA_DR, ICOS, IDO1, PD_L2)
+
+library(reshape2)
+d_dist <- melt(d56, id.vars = c("Censor_RFS"), variable.name = "marker",   value.name = "expression")   ## very good tidy method = gather
+cn_v <- c("expression")
+d_dist[cn_v] <- lapply(d_dist[cn_v], function(x) as.numeric(as.character(x)))  # as.numeric(paste(f)) if f =factor
+d_dist <- d_dist %>% arrange(marker) %>% rename(RFS_Status =Censor_RFS )
+
+d_dist$RFS_Status <- factor(d_dist$RFS_Status, levels = 0:1, labels = c(  "RFS=No", "RFS=Yes"))
+d_dist$marker <- factor(d_dist$marker ,  levels = c("B2M", "CD11c" , "CD20",  "CD40" ,  "CD56" ,  "GZMB", "HLA_DR", "ICOS", "IDO1", "PD_L2" ), labels =c("B2M", "CD11c" , "CD20",  "CD40" ,  "CD56" ,  "GZMB", "HLA-DR", "ICOS", "IDO1", "PD-L2" ))
+cn_v <- c("expression")
+d_dist[cn_v] <- lapply(d_dist[cn_v], function(x) as.numeric(as.character(x)))  # as.numeric(paste(f)) if f =factor
+# png(file.path("/projects/bsi/fl/studies/s214070.Thompson.DSP2/re_analyze_FinXX950/figuredistribution/distributionplot_Finxx_Halo_TNBC/r1B_distplot_FinXX_stroma.png"), width=720, height=480)
+ggplot(data=d_dist, aes(x=log2(expression), y=marker, color=RFS_Status, point_color=RFS_Status, fill=RFS_Status))+
+  geom_density_ridges( scale = .95, rel_min_height = .01, point_shape = "|", point_size = 0.1, size = 0.3, quantile_lines = FALSE, quantiles = 1, alpha=0.2)+
+  theme_ridges(grid = FALSE) +
+  scale_fill_manual(values=c('#3498DB','black')) +
+  scale_color_manual(values=c('#3498DB','black')) +
+  xlab("Log2(expression) in Stroma          ") +
+  ylab(" ") + xlim(2.5, 15)+
+  ggtitle(" ") +
+   theme(plot.margin = unit(c(5.5, 5.5, 5.5, 50), "points"),
+          plot.title = element_text(size = 12, color = "black", face = "bold", hjust = -0.25), 
+           axis.text = element_text( color="black", size = 12, face="bold"),
+         axis.title.x = element_text(color="black", size = 12, face="bold"),
+         axis.title.y = element_text(color="black", size = 12, face="bold"),
+           legend.position="right",
+           legend.title = element_text(colour="black", size=12,  face="bold") ,
+           legend.text = element_text(colour="black", size=12,  face="bold"))
+
+  ##scale_x_continuous(limits = c(-5000, 5000))
+# dev.off()
+
+```
+
+
+Table 1: Kolmogorov–Smirnov test (K–S test or KS test) to identify if each protein has different distribution by RFS-yes vs RFS-no based on Finxx tumor data
+
+
+```{r   echo = FALSE,  warning=FALSE, message=FALSE  , fig.width=6, fig.height=8 }
+
+
+
+fun.ks.test <- function(dat){  
+out <- NULL
+d1 <- dat %>% filter(Censor_RFS == "0")
+d2 <- dat %>% filter(Censor_RFS == "1")
+for (i in 2:11) {
+res <-  ks.test( d1[[i]]  , d2[[i]] ) 
+ p <- res$p.value
+ p1 <- ifelse(p < 0.001, "<0.001", round(p, 3))
+     out <- rbind(out, p1)
+}
+return(out)
+}
+
+dat <- d1_Finxxtumor %>% dplyr::rename(B2M = Beta_2_microglobulin)  %>% 
+                         dplyr::select(Censor_RFS,  B2M, CD11c, CD20, CD40,  CD56, GZMB, HLA_DR, ICOS, IDO1, PD_L2)  ## given data 
+var.more <- colnames(dat)[2:11]
+dat$Censor_RFS <- factor(dat$Censor_RFS)
+dat[var.more] <- lapply(dat[var.more], function(x) as.numeric(as.character(x)))  # convert to numeric
+ks.finxx.tumor <- fun.ks.test(dat)
+
+dat <- d1_Finxxstroma %>% dplyr::rename(B2M = Beta_2_microglobulin)  %>% 
+                         dplyr::select(Censor_RFS,  B2M, CD11c, CD20, CD40,  CD56, GZMB, HLA_DR, ICOS, IDO1, PD_L2)  ## given data 
+var.more <- colnames(dat)[2:11]
+dat$Censor_RFS <- factor(dat$Censor_RFS)
+dat[var.more] <- lapply(dat[var.more], function(x) as.numeric(as.character(x)))  # convert to numeric
+ks.finxx.stroma <- fun.ks.test(dat)
+
+print1 <- data.frame(var.more, ks.finxx.tumor, ks.finxx.stroma)
+colnames(print1) <- c("Terms", "KS test P value Finxx tumor", "KS test P value Finxx stroma")
+mRclwhip::format_flextable(print1) 
+
+
+```
+
+
